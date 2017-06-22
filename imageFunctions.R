@@ -1,4 +1,4 @@
-
+library("videoplayR")
 
 webcamImage = function(rollFrames = 4, showImage = FALSE, saveImageToWD = NA){
   
@@ -31,5 +31,3 @@ webcamImage = function(rollFrames = 4, showImage = FALSE, saveImageToWD = NA){
   return(img)
   
 }
-
-
