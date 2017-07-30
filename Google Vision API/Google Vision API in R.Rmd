@@ -1,0 +1,81 @@
+---
+title: "Google Vision API in R"
+author: "Scott Stoltzman"
+date: "7/29/2017"
+output: html_document
+---
+
+## Using the Google Vision API in R  
+
+### Utilizing RoogleVision  
+
+After doing my post last month on OpenCV and face detection, I started looking into other algorithms used for pattern detection in images. As it turns out, Google has done a phenomenal job with their Vision API. It's absolutely incredible the amount of information it can spit back to you by simply sending it a picture.  
+
+Also, it's 100% free! I believe that includes 1000 images per month. Amazing!  
+
+In this post I'm going to walk you through the absolute basics of accessing the power of the Google Vision API using the RoogleVision package in R.
+
+As always, we'll start off loading some libraries. I wrote some extra notation around where you can install them within the code.  
+
+```{r setup, message=FALSE, warning=FALSE}
+# Normal Libraries
+library(tidyverse)
+
+# devtools::install_github("flovv/RoogleVision")
+library(RoogleVision)
+library(jsonlite) # to import credentials
+
+# For image processing
+# source("http://bioconductor.org/biocLite.R")
+# biocLite("EBImage")
+library(EBImage)
+
+# For Latitude Longitude Map
+library(leaflet)
+```
+
+#### Google Authentication  
+
+In order to use the API, you have to authenticate. There is plenty of documentation out there about how to setup an account, create a project, download credentials, etc. Head over to [Google Cloud Console](https://console.cloud.google.com) if you don't have an account already.
+
+```{r}
+# Credentials file I downloaded from the cloud console
+creds = fromJSON('credentials.json')
+
+# Google Authentication - Use Your Credentials
+# options("googleAuthR.client_id" = "xxx.apps.googleusercontent.com")
+# options("googleAuthR.client_secret" = "")
+
+options("googleAuthR.client_id" = creds$installed$client_id)
+options("googleAuthR.client_secret" = creds$installed$client_secret)
+options("googleAuthR.scopes.selected" = c("https://www.googleapis.com/auth/cloud-platform"))
+googleAuthR::gar_auth()
+```
+  
+  
+### Now You're Ready to Go  
+
+The function getGoogleVisionResponse takes three arguments:
+
+  1. imagePath
+  2. feature
+  3. numResults
+
+Numbers 1 and 3 are self-explanatory, "feature" has 5 options:  
+
+  * LABEL_DETECTION
+  * LANDMARK_DETECTION
+  * FACE_DETECTION
+  * LOGO_DETECTION
+  * TEXT_DETECTION  
+
+Again, these are self-explanatory but it's nice to see each one in action. 
+
+#### a
+```{r}
+dog_mountain_label = getGoogleVisionResponse('dog_mountain.jpg',
+                                              feature = 'LABEL_DETECTION')
+dog_mountain_label
+```
+
+
