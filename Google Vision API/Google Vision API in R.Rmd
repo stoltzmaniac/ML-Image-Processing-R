@@ -71,11 +71,60 @@ Numbers 1 and 3 are self-explanatory, "feature" has 5 options:
 
 Again, these are self-explanatory but it's nice to see each one in action. 
 
-#### a
+#### Label Detection  
+
+This is used to help determine context of the photo. It can basically add a level of metadata around the image.  
+
+Here is a photo of our dog when we hiked up to Audubon Peak in Colorado:  
+
+
 ```{r}
 dog_mountain_label = getGoogleVisionResponse('dog_mountain.jpg',
                                               feature = 'LABEL_DETECTION')
 dog_mountain_label
 ```
+  
+  
+All 5 responses were incredibly accurate! The "score" that is returned is how confident the Google Vision algorithms are, so it said there's a 91.9% chance a mountain is prominent in this photo. I like "dog hiking" the best - considering that's what we were doing at the time. Kind of a little bit too accurate...
 
+#### Landmark Detection  
+
+This is a feature designed to specifically pick out a recognizable landmark! It provides the position in the image along with the geolocation of the landmark (in longitude and latitude).  
+
+Here is a picture of my wife and me in Germany at the Linderhof Castle in Bavaria, Germany.  
+
+```{r}
+us_landmark = getGoogleVisionResponse('us_castle_2.jpg',
+                                      feature = 'LANDMARK_DETECTION')
+us_landmark
+```
+
+It only returned 1 result, but it was spot on. While it had a low score, it's due to the fact I lowered the image resolution in order to be able to "plot" the image in R.
+
+```{r}
+us_castle <- readImage('us_castle_2.jpg')
+plot(us_castle)
+xs = us_landmark$boundingPoly$vertices[[1]][1][[1]]
+ys = us_landmark$boundingPoly$vertices[[1]][2][[1]]
+polygon(x=xs,y=ys,border='red',lwd=4)
+```
+
+
+
+```{r}
+latt = us_landmark$locations[[1]][[1]][[1]]
+lon = us_landmark$locations[[1]][[1]][[2]]
+m = leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  setView(lng = lon, lat = latt, zoom = 5) %>%
+  addMarkers(lng = lon, lat = latt)
+m
+```
+
+
+```{r}
+us_dog_mountain_face = getGoogleVisionResponse('us_dog_mountain.jpg',
+                                            feature = 'FACE_DETECTION')
+us_dog_mountain_face
+```
 

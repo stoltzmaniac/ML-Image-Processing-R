@@ -39,7 +39,6 @@ polygon(x=xs,y=ys,border='red',lwd=4)
 
 latt = us_landmark$locations[[1]][[1]][[1]]
 lon = us_landmark$locations[[1]][[1]][[2]]
-
 m = leaflet() %>%
   addProviderTiles(providers$CartoDB.Positron) %>%
   setView(lng = lon, lat = latt, zoom = 5) %>%
