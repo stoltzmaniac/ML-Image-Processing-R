@@ -69,37 +69,60 @@ Numbers 1 and 3 are self-explanatory, "feature" has 5 options:
   * LOGO_DETECTION
   * TEXT_DETECTION  
 
-Again, these are self-explanatory but it's nice to see each one in action. 
+These are self-explanatory but it's nice to see each one in action. 
+
+As a side note: there are also other features that the API has which aren't included (yet) in the RoogleVision package such as "Safe Search" which identifies inappropriate content, "Properties" which identifies dominant colors and aspect ratios and a few others can be found at the [Cloud Vision website](https://cloud.google.com/vision/)
+
+----  
 
 #### Label Detection  
 
-This is used to help determine context of the photo. It can basically add a level of metadata around the image.  
+This is used to help determine content within the photo. It can basically add a level of metadata around the image.  
 
 Here is a photo of our dog when we hiked up to Audubon Peak in Colorado:  
+
+```{r echo=FALSE}
+dog_mountain_image <- readImage('dog_mountain.jpg')
+plot(dog_mountain_image)
+```
+
 
 
 ```{r}
 dog_mountain_label = getGoogleVisionResponse('dog_mountain.jpg',
                                               feature = 'LABEL_DETECTION')
-dog_mountain_label
+head(dog_mountain_label)
 ```
   
   
-All 5 responses were incredibly accurate! The "score" that is returned is how confident the Google Vision algorithms are, so it said there's a 91.9% chance a mountain is prominent in this photo. I like "dog hiking" the best - considering that's what we were doing at the time. Kind of a little bit too accurate...
+All 5 responses were incredibly accurate! The "score" that is returned is how confident the Google Vision algorithms are, so there's a 91.9% chance a mountain is prominent in this photo. I like "dog hiking" the best - considering that's what we were doing at the time. Kind of a little bit too accurate...  
 
-#### Landmark Detection  
+----  
+
+#### Landmark Detection   
 
 This is a feature designed to specifically pick out a recognizable landmark! It provides the position in the image along with the geolocation of the landmark (in longitude and latitude).  
 
-Here is a picture of my wife and me in Germany at the Linderhof Castle in Bavaria, Germany.  
+My wife and I took this selfie in at the Linderhof Castle in Bavaria, Germany. 
+
+```{r}
+us_castle <- readImage('us_castle_2.jpg')
+plot(us_castle)
+```
+  
+
+The response from the Google Vision API was spot on. It returned "Linderhof Palace" as the description. It also provided a  score (I reduced the resolution of the image which hurt the score), a boundingPoly field and locations.  
+
+  * Bounding Poly - gives x,y coordinates for a polygon around the landmark in the image
+  * Locations - provides longitude,latitude coordinates  
 
 ```{r}
 us_landmark = getGoogleVisionResponse('us_castle_2.jpg',
                                       feature = 'LANDMARK_DETECTION')
-us_landmark
+head(us_landmark)
 ```
-
-It only returned 1 result, but it was spot on. While it had a low score, it's due to the fact I lowered the image resolution in order to be able to "plot" the image in R.
+  
+I plotted the polygon over the image using the coordinates returned. It does a great job (certainly not perfect) of getting the castle identified. It's a bit tough to say what the actual "landmark" would be in this case due to the fact the fountains, stairs and grounds are certainly important and are a key part of the castle.
 
 ```{r}
 us_castle <- readImage('us_castle_2.jpg')
@@ -108,8 +131,11 @@ xs = us_landmark$boundingPoly$vertices[[1]][1][[1]]
 ys = us_landmark$boundingPoly$vertices[[1]][2][[1]]
 polygon(x=xs,y=ys,border='red',lwd=4)
 ```
+  
+  
+Turning to the locations - I plotted this using the leaflet library. If you haven't used leaflet, start doing so immediately. I'm a huge fan of it due to speed and simplicity. There are a lot of customization options available as well that you can check out.  
 
-
+The location = spot on! While it isn't a shock to me that Google could provide the location of "Linderhof Castle" - it is amazing to me that I don't have to write a web crawler search function to find it myself! That's just one of many little luxuries they have built into this API.
 
 ```{r}
 latt = us_landmark$locations[[1]][[1]][[1]]
@@ -122,9 +148,162 @@ m
 ```
 
 
+----  
+
+#### Face Detection  
+
+My last blog post showed the OpenCV package utilizing the haar cascade algorithm in action. I didn't dig into Google's algorithms to figure out what is under the hood, but it provides similar results. However, rather than layering in each subsequent "find the eyes" and "find the mouth" and ...etc... it returns more than you ever needed to know.
+
+  * Bounding Poly = highest level polygon
+  * FD Bounding Poly = polygon surrounding each face
+  * Landmarks = (funny name) includes each feature of the face (left eye, right eye, etc.)
+  * Roll Angle, Pan Angle, Tilt Angle = all of the different angles you'd need per face
+  * Confidence (detection and landmarking) = how certain the algorithm is that it's accurate
+  * Joy, sorrow, anger, surprise, under exposed, blurred, headwear likelihoods = how likely it is that each face contains that emotion or characteristic
+
+The likelihoods is another amazing piece of information returned! I have run about 20 images through this API and every single one has been accurate - very impressive!
+
+I wanted to showcase the face detection and headwear first. Here's a picture of my wife and I at "The Bean" in Chicago (side note: it's awesome! I thought it was going to be really silly, but you can really have a lot of fun with all of the angles and reflections):
+
 ```{r}
-us_dog_mountain_face = getGoogleVisionResponse('us_dog_mountain.jpg',
-                                            feature = 'FACE_DETECTION')
-us_dog_mountain_face
+us_hats_pic <- readImage('us_hats.jpg')
+plot(us_hats_pic)
 ```
+
+
+```{r}
+us_hats = getGoogleVisionResponse('us_hats.jpg',
+                                      feature = 'FACE_DETECTION')
+head(us_hats)
+```
+
+
+```{r}
+us_hats_pic <- readImage('us_hats.jpg')
+plot(us_hats_pic)
+
+xs1 = us_hats$fdBoundingPoly$vertices[[1]][1][[1]]
+ys1 = us_hats$fdBoundingPoly$vertices[[1]][2][[1]]
+
+xs2 = us_hats$fdBoundingPoly$vertices[[2]][1][[1]]
+ys2 = us_hats$fdBoundingPoly$vertices[[2]][2][[1]]
+
+polygon(x=xs1,y=ys1,border='red',lwd=4)
+polygon(x=xs2,y=ys2,border='green',lwd=4)
+```
+
+
+Here's a shot that should be familiar (copied directly from my last blog) - and I wanted to highlight the different features that can be detected. Look at how many points are perfectly placed:
+
+```{r}
+my_face_pic <- readImage('my_face.jpg')
+plot(my_face_pic)
+```
+
+
+
+```{r}
+my_face = getGoogleVisionResponse('my_face.jpg',
+                                      feature = 'FACE_DETECTION')
+head(my_face)
+```
+
+
+
+```{r}
+head(my_face$landmarks)
+```
+
+
+
+```{r}
+my_face_pic <- readImage('my_face.jpg')
+plot(my_face_pic)
+
+xs1 = my_face$fdBoundingPoly$vertices[[1]][1][[1]]
+ys1 = my_face$fdBoundingPoly$vertices[[1]][2][[1]]
+
+xs2 = my_face$landmarks[[1]][[2]][[1]]
+ys2 = my_face$landmarks[[1]][[2]][[2]]
+
+polygon(x=xs1,y=ys1,border='red',lwd=4)
+points(x=xs2,y=ys2,lwd=2, col='lightblue')
+```
+
+----
+
+#### Logo Detection
+  
+To continue along the Chicago trip, we drove by Wrigley field and I took a really bad photo of the sign from a moving car as it was under construction. It's nice because it has a lot of different lines and writing the Toyota logo isn't incredibly prominent or necessarily fit to brand colors.
+
+This call returns:  
+
+  * Description = Brand name of the logo detected
+  * Score = Confidence of prediction accuracy
+  * Bounding Poly = (Again) coordinates of the logo
+
+  
+```{r}
+wrigley_image <- readImage('wrigley_text.jpg')
+plot(wrigley_image)
+```
+
+
+
+```{r}
+wrigley_logo = getGoogleVisionResponse('wrigley_text.jpg',
+                                   feature = 'LOGO_DETECTION')
+head(wrigley_logo)
+```
+
+
+```{r}
+wrigley_image <- readImage('wrigley_text.jpg')
+plot(wrigley_image)
+xs = wrigley_logo$boundingPoly$vertices[[1]][[1]]
+ys = wrigley_logo$boundingPoly$vertices[[1]][[2]]
+polygon(x=xs,y=ys,border='green',lwd=4)
+```
+
+----
+
+#### Text Detection
+
+I'll continue using the Wrigley Field picture. There is text all over the place and it's fun to see what is captured and what isn't. It appears as if the curved text at the top "field" isn't easily interpreted as text. However, the rest is caught and the words are captured.  
+
+The response sent back is a bit more difficult to interpret than the rest of the API calls - it breaks things apart by word but also returns everything as one line. Here's what comes back:  
+
+  * Locale = language, returned as source
+  * Description = the text (the first line is everything, and then the rest are indiviudal words)
+  * Bounding Poly = I'm sure you can guess by now
+
+```{r}
+wrigley_text = getGoogleVisionResponse('wrigley_text.jpg',
+                                   feature = 'TEXT_DETECTION')
+head(wrigley_text)
+```
+
+```{r}
+wrigley_image <- readImage('wrigley_text.jpg')
+plot(wrigley_image)
+
+for(i in 1:length(wrigley_text$boundingPoly$vertices)){
+  xs = wrigley_text$boundingPoly$vertices[[i]]$x
+  ys = wrigley_text$boundingPoly$vertices[[i]]$y
+  polygon(x=xs,y=ys,border='green',lwd=2)
+}
+```
+
+----
+
+That's about it for the basics of using the Google Vision API with the RoogleVision library. I highly recommend tinkering around with it a bit, especially because it won't cost you a dime.  
+
+While I do enjoy the math under the hood and the thinking required to understand alrgorithms, I do think these sorts of API's will become the way of the future for data science. Outside of specific use cases or special industries, it seems hard to imagine wanting to try and create algorithms that would be better than ones created for mass consumption. As long as they're fast, free and accurate, I'm all about making my life easier! From the hiring perspective, I much prefer someone who can get the job done over someone who can slightly improve performance (as always, there are many cases where this doesn't apply).
+
+Please comment if you are utilizing any of the Google API's for business purposes, I would love to hear it!
+
+As always you can find this on my [GitHub](https://github.com/stoltzmaniac/ML-Image-Processing-R)
+
+
+
 
