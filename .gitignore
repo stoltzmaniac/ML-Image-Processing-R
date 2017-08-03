@@ -37,3 +37,4 @@ vignettes/*.pdf
 *.csv
 *.json
 *.httr-oauth
+*.txt
