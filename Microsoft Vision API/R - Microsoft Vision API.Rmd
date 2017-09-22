@@ -1,0 +1,82 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r libraries_and_credentials}
+library(tidyverse)
+library(RCurl)
+library(httr)
+
+credentials = read_csv('credentials.csv')
+api_key = as.character(credentials$subscription_id) #api key is not subscription id
+api_endpoint_url = "https://westcentralus.api.cognitive.microsoft.com/vision/v1.0/analyze"
+```
+
+```{r}
+image_url = 'https://imgur.com/rapIn0u.jpg'
+visualFeatures = "Description,Tags,Categories"
+# options = Categories, Tags, Description, Faces, ImageType, Color, Adult
+
+details = "Landmarks"
+# options = Landmarks, Celebrities
+
+reqURL = paste(api_endpoint_url,
+               "?visualFeatures=",
+               visualFeatures,
+               "&details=",
+               details,
+               sep="")
+
+APIresponse = POST(url = reqURL,
+                   content_type('application/json'),
+                   add_headers(.headers = c('Ocp-Apim-Subscription-Key' = api_key)),
+                   body=list(url = image_url),
+                   encode = "json") 
+
+df = content(APIresponse)
+
+```
+
+![Sample Image](`r image_url`)
+
+```{r}
+description_tags = df$description$tags
+description_tags_tib = tibble(tag = character())
+for(tag in description_tags){
+  for(text in tag){
+     if(class(tag) != "list"){
+      tmp = tibble(tag = tag)
+      description_tags_tib = description_tags_tib %>% bind_rows(tmp)
+    } 
+  }
+}
+
+knitr::kable(description_tags_tib)
+```
+
+```{r}
+captions = df$description$captions
+captions_tib = tibble(text = character(), confidence = numeric())
+for(caption in captions){
+  tmp = tibble(text = caption$text, confidence = caption$confidence)
+  captions_tib = captions_tib %>% bind_rows(tmp)
+}
+knitr::kable(captions_tib)
+```
+
+```{r}
+metadata = df$metadata
+metadata_tib = tibble(width = metadata$width, height = metadata$height, format = metadata$format)
+knitr::kable(metadata_tib)
+```
+
+```{r}
+tags = df$tags
+tags_tib = tibble(name = character(), confidence = numeric())
+for(tag in tags){
+  tmp = tibble(name = tag$name, confidence = tag$confidence)
+  tags_tib = tags_tib %>% bind_rows(tmp)
+}
+knitr::kable(tags_tib)
+```
+
