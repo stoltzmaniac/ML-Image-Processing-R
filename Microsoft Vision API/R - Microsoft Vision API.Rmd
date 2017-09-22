@@ -37,7 +37,7 @@ df = content(APIresponse)
 
 ```
 
-![Sample Image](`r image_url`)
+![Sample Image](http://www.stoltzmaniac.com/wp-content/uploads/2017/09/SnoozeGenius.jpg)
 
 ```{r}
 description_tags = df$description$tags
