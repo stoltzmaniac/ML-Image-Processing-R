@@ -1,11 +1,46 @@
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```
+
+# Microsoft Cognitive Services Vision API in R  
+
+----
+
+A little while ago I did a brief tutorial of the [Google Vision API using RoogleVision](https://www.stoltzmaniac.com/google-vision-api-in-r-rooglevision/) created by Mark Edmonson. I couldn't find anything similar to that in R for the [Microsoft Cognitive Services API](https://docs.microsoft.com/en-us/azure/cognitive-services/computer-vision/quickstarts/python#AnalyzeImage) so I thought I would give it a shot. I whipped this example together quickly to give it a proof-of-concept but I could certainly see myself building an R package to support this (unless someone can point to one - and please do if one exists)!  
+
+
+The API is extremely easy to access using RCurl and httr. There are **a lot** of options which can be accessed. In this example, I'll just cover the basics of image detection and descriptions.  
+
+
+### Getting Started With Microsoft Cognitive Services
+
+In order to get started, all you need is an [Azure Account](https://azure.microsoft.com/en-us/free/) which is **free** if you can keep yourself under certain thresholds and limits. There is even a free trial period (at the time this was written, at least).  
+
+Once that is taken care of there are a few things you need to do:  
+
+  1. Login to [portal.azure.com](https://portal.azure.com)
+  2. On the lefthand menu click "Add"
+  ![Figure 1](https://i.imgur.com/OPihH39.png)  
+  
+  
+  3. Click on "AI + Cognitive Services" and then the "Computer Vision API"
+  ![Figure 2](https://i.imgur.com/GMy2LFZ.png)  
+  
+  
+  4. Fill out the information required. You may have "Free Trial" under Subscription. Pay special attention to **Location** because this will be used in your API script 
+  ![Figure 3](https://i.imgur.com/t7vg4vH.png)  
+  
+  
+  5. In the lefthand menu, click "Keys" underneath "Resource Management" and you will find what you need for credentials. Underneath your Endpoint URL, click on "Show access keys..." - **copy your key** and use it in your script (do not make this publicly accessible)
+  ![Figure 4](https://i.imgur.com/CKkC2nx.png)
+
+
 
 ```{r libraries_and_credentials}
 library(tidyverse)
 library(RCurl)
 library(httr)
+library(EBImage)
 
 credentials = read_csv('credentials.csv')
 api_key = as.character(credentials$subscription_id) #api key is not subscription id
@@ -14,8 +49,8 @@ api_endpoint_url = "https://westcentralus.api.cognitive.microsoft.com/vision/v1.
 
 ```{r}
 image_url = 'https://imgur.com/rapIn0u.jpg'
-visualFeatures = "Description,Tags,Categories"
-# options = Categories, Tags, Description, Faces, ImageType, Color, Adult
+visualFeatures = "Description,Tags,Categories,Faces"
+# options = "Categories, Tags, Description, Faces, ImageType, Color, Adult"
 
 details = "Landmarks"
 # options = Landmarks, Celebrities
@@ -34,24 +69,27 @@ APIresponse = POST(url = reqURL,
                    encode = "json") 
 
 df = content(APIresponse)
-
 ```
 
-![Sample Image](http://www.stoltzmaniac.com/wp-content/uploads/2017/09/SnoozeGenius.jpg)
+```{r}
+my_image <- readImage('SnoozeGenius.jpg')
+plot(my_image)
+```
+
 
 ```{r}
 description_tags = df$description$tags
 description_tags_tib = tibble(tag = character())
 for(tag in description_tags){
   for(text in tag){
-     if(class(tag) != "list"){
+     if(class(tag) != "list"){  ## To remove the extra caption from being included
       tmp = tibble(tag = tag)
       description_tags_tib = description_tags_tib %>% bind_rows(tmp)
     } 
   }
 }
 
-knitr::kable(description_tags_tib)
+knitr::kable(description_tags_tib[1:5,])
 ```
 
 ```{r}
@@ -71,12 +109,48 @@ knitr::kable(metadata_tib)
 ```
 
 ```{r}
-tags = df$tags
-tags_tib = tibble(name = character(), confidence = numeric())
-for(tag in tags){
-  tmp = tibble(name = tag$name, confidence = tag$confidence)
-  tags_tib = tags_tib %>% bind_rows(tmp)
+faces = df$faces
+faces_tib = tibble(faceID = numeric(),
+                   age = numeric(), 
+                   gender = character(),
+                   x1 = numeric(),
+                   x2 = numeric(),
+                   y1 = numeric(),
+                   y2 = numeric())
+
+n = 0
+for(face in faces){
+  n = n + 1
+  tmp = tibble(faceID = n,
+               age = face$age, 
+               gender = face$gender,
+               x1 = face$faceRectangle$left,
+               y1 = face$faceRectangle$top,
+               x2 = face$faceRectangle$left + face$faceRectangle$width,
+               y2 = face$faceRectangle$top + face$faceRectangle$height)
+  faces_tib = faces_tib %>% bind_rows(tmp)
 }
-knitr::kable(tags_tib)
+faces_tib
+knitr::kable(faces_tib)
+```
+
+```{r}
+my_image <- readImage('SnoozeGenius.jpg')
+plot(my_image)
+
+coords = faces_tib %>% select(x1, y1, x2, y2)
+for(i in 1:nrow(coords)){
+  print(i)
+  xs = c(coords$x1[i], coords$x1[i], coords$x2[i], coords$x2[i])
+  ys = c(coords$y1[i], coords$y2[i], coords$y2[i], coords$y1[i])
+  polygon(x = xs, y = ys, border = i+1, lwd = 4)
+}
+```
+
+Image Caption = `r print(captions_tib$text)`
+
+
+```{r}
+str(df)
 ```
 
